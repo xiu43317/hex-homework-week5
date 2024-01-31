@@ -26,6 +26,7 @@ const app = Vue.createApp({
       products: [],
       tempProduct: {},
       isLoading: true,
+      isDiscount: false,
     };
   },
   methods: {
@@ -34,17 +35,23 @@ const app = Vue.createApp({
       return phoneNumber.test(value) ? true : "需要正確的電話號碼";
     },
     onSubmit() {
-      //console.log(this.user);
+      if (this.cart.carts.length === 0) {
+        alert("購物車不得為空");
+        return;
+      } else {
+        //console.log(this.user);
+        alert("訂單已送出");
+      }
     },
     getProducts() {
       axios
-        .get(`${url}/api/${path}/products/all`)
+        .get(`${url}/api/${path}/products/`)
         .then((res) => {
           //console.log(res.data.products);
-          this.products = { ...res.data.products };
+          this.products = res.data.products;
           for (let i = 0; i < this.products.length; i++) {
             this.products[i].isLoading = false;
-            this.product[i].checkLoading = false;
+            this.products[i].checkLoading = false;
           }
           //console.log(this.products);
           this.isLoading = false;
@@ -54,48 +61,143 @@ const app = Vue.createApp({
           this.isLoading = false;
         });
     },
+    getCart() {
+      axios
+        .get(`${url}/api/${path}/cart`)
+        .then((res) => {
+          this.cart = { ...res.data.data };
+          for (let i = 0; i < this.cart.carts.length; i++) {
+            this.cart.carts[i].cancelLoading = false;
+          }
+          //console.log(this.cart);
+        })
+        .catch((err) => {
+          console.dir(err);
+        });
+    },
+    updateCart(id, qty) {
+      axios
+        .post(`${url}/api/${path}/cart`, {
+          data: {
+            product_id: id,
+            qty: qty,
+          },
+        })
+        .then((res) => {
+          //console.log(res.data.message);
+          this.$refs.userProductModal.isLoading = false;
+          this.products.filter((item) => {
+            return (item.isLoading = false);
+          });
+          alert(res.data.message);
+          //console.log(this.products);
+          this.$refs.userProductModal.closeModal();
+          this.getCart();
+        })
+        .catch((err) => {
+          console.log(err);
+          this.$refs.userProductModal.isLoading = false;
+          this.products.filter((item) => {
+            return (item.isLoading = false);
+          });
+        });
+    },
     addToCart(product, qty = 0) {
       qty === 0
         ? (product.isLoading = true)
         : (this.$refs.userProductModal.isLoading = true);
-      const index = this.cart.findIndex((item) => item.id === product.id);
-      setTimeout(() => {
-        if (index !== -1 && qty !== 0) {
-          this.$refs.userProductModal.isLoading = false;
-          this.cart[index].qty += qty;
-        } else if (index !== -1 && qty === 0) {
-          product.isLoading = false;
-          this.cart[index].qty += 1;
-        } else if (index === -1 && qty === 0) {
-          product.isLoading = false;
-          this.cart.push({
-            id: product.id,
-            qty: 1,
-            cancelLoading: false,
-            carts: { ...product },
-          });
-        } else {
-          this.cart.push({
-            id: product.id,
+      const index = this.cart.carts.findIndex((item) => item.id === product.id);
+      // 購物車有這項目
+      if (index !== -1 && qty !== 0) {
+        this.updateCart(product.id, qty);
+        // 表格上面的項目且購物車裡面有項目
+      } else if (index !== -1 && qty === 0) {
+        let total_qty = (this.cart[index].qty += 1);
+        this.updateCart(product.id, total_qty);
+        // 表格上面的項目且購物車沒有這項目
+      } else if (index === -1 && qty === 0) {
+        this.updateCart(product.id, 1);
+        // 購物車沒有這項目
+      } else {
+        this.updateCart(product.id, qty);
+      }
+      // setTimeout(() => {
+      //   if (index !== -1 && qty !== 0) {
+      //     this.$refs.userProductModal.isLoading = false;
+      //     this.cart[index].qty += qty;
+      //   } else if (index !== -1 && qty === 0) {
+      //     product.isLoading = false;
+      //     this.cart[index].qty += 1;
+      //   } else if (index === -1 && qty === 0) {
+      //     product.isLoading = false;
+      //     this.cart.push({
+      //       id: product.id,
+      //       qty: 1,
+      //       cancelLoading: false,
+      //       carts: { ...product },
+      //     });
+      //   } else {
+      //     this.cart.push({
+      //       id: product.id,
+      //       qty: qty,
+      //       cancelLoading: false,
+      //       carts: { ...product },
+      //     });
+      //     this.$refs.userProductModal.isLoading = false;
+      //   }
+      //   this.$refs.userProductModal.closeModal();
+      // }, 500);
+    },
+    renewCart(item, qty) {
+      axios
+        .put(`${url}/api/${path}/cart/${item.id}`, {
+          data: {
+            product_id: item.product.id,
             qty: qty,
-            cancelLoading: false,
-            carts: { ...product },
-          });
-          this.$refs.userProductModal.isLoading = false;
-        }
-        this.$refs.userProductModal.closeModal();
-      }, 500);
+          },
+        })
+        .then((res) => {
+          //console.log(res.data.message);
+          alert(res.data.message);
+          this.getCart();
+        })
+        .catch((err) => {
+          //console.log(err);
+          alert(err.message);
+        });
     },
     clearCart() {
-      this.cart = [];
+      if (this.cart.carts.length === 0) {
+        alert("購物車已經是空的");
+        return;
+      }
+      axios
+        .delete(`${url}/api/${path}/carts`)
+        .then((res) => {
+          //console.log(res.data.message);
+          alert("全部商品" + res.data.message);
+          this.cart = { carts: [] };
+        })
+        .catch((err) => {
+          //console.log(err);
+          alert(err.message);
+        });
     },
     deleteItem(product) {
       product.cancelLoading = true;
-      setTimeout(() => {
-        const index = this.cart.findIndex((item) => item.id === product.id);
-        this.cart.splice(index, 1);
-        product.cancelLoading = false;
-      }, 500);
+      axios
+        .delete(`${url}/api/${path}/cart/${product.id}`)
+        .then((res) => {
+          //console.log(res.data.message);
+          alert(`${product.product.title}${res.data.message}`);
+          product.cancelLoading = false;
+          this.getCart();
+        })
+        .catch((err) => {
+          //console.dir(err);
+          alert(err.message);
+          product.cancelLoading = false;
+        });
     },
     openModal(item) {
       this.tempProduct = item;
@@ -106,24 +208,10 @@ const app = Vue.createApp({
       }, 500);
     },
   },
-  computed: {
-    origin_sum() {
-      let total = 0;
-      this.cart.forEach((item) => {
-        total += item.carts.origin_price * item.qty;
-      });
-      return total;
-    },
-    discount_sum() {
-      let total = 0;
-      this.cart.forEach((item) => {
-        total += item.carts.price * item.qty;
-      });
-      return total;
-    },
-  },
+  computed: {},
   mounted() {
     this.getProducts();
+    this.getCart();
   },
 });
 app.use(VueLoading.LoadingPlugin);

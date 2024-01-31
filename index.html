@@ -45,7 +45,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="item in products" :key="item.id">
+              <tr v-for="(item,index) in products" :key="item.id">
                 <td style="width: 200px">
                   <div
                     alt=""
@@ -84,7 +84,7 @@
                       @click="addToCart(item)"
                     >
                       <i
-                        v-show="item.isLoading"
+                        v-if="item.isLoading"
                         class="fas fa-spinner fa-pulse"
                       ></i>
                       加到購物車
@@ -115,7 +115,7 @@
             </thead>
             <tbody>
               <template v-if="cart">
-                <tr v-for="(item,key) in cart" :key="item.id">
+                <tr v-for="(item,key) in cart.carts" :key="item.id">
                   <td>
                     <button
                       type="button"
@@ -130,7 +130,7 @@
                     </button>
                   </td>
                   <td>
-                    {{ item.carts.title }}
+                    {{ item.product.title }}
                     <div class="text-success">已套用優惠券</div>
                   </td>
                   <td>
@@ -140,29 +140,32 @@
                           min="1"
                           type="number"
                           class="form-control"
-                          v-model.lazy="item.qty"
+                          v-model="item.qty"
+                          @change="renewCart(item,item.qty)"
                         />
                         <span class="input-group-text" id="basic-addon2"
-                          >{{ item.carts.unit }}</span
+                          >{{ item.product.unit }}</span
                         >
                       </div>
                     </div>
                   </td>
                   <td class="text-end">
-                    <small class="text-success">折扣價：</small>
-                    {{ item.carts.price*item.qty }}
+                    <small class="text-success" v-show="isDiscount"
+                      >折扣價：</small
+                    >
+                    {{ item.final_total }}
                   </td>
                 </tr>
               </template>
             </tbody>
             <tfoot>
-              <tr>
+              <tr v-show="!isDiscount">
                 <td colspan="3" class="text-end">總計</td>
-                <td class="text-end">{{ origin_sum }}</td>
+                <td class="text-end">{{ cart.final_total }}</td>
               </tr>
-              <tr>
+              <tr v-show="isDiscount">
                 <td colspan="3" class="text-end text-success">折扣價</td>
-                <td class="text-end text-success">{{ discount_sum }}</td>
+                <td class="text-end text-success">{{ cart.final_total }}</td>
               </tr>
             </tfoot>
           </table>
