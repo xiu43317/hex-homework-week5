@@ -20,8 +20,9 @@ const app = Vue.createApp({
         email: "",
         name: "",
         address: "",
-        phone: "",
+        tel: "",
       },
+      message: "",
       cart: [],
       products: [],
       tempProduct: {},
@@ -40,7 +41,26 @@ const app = Vue.createApp({
         return;
       } else {
         //console.log(this.user);
-        alert("訂單已送出");
+        const userDetail = {
+          data: {
+            user: this.user,
+            message: this.message,
+          },
+        };
+        axios
+          .post(`${url}/api/${path}/order`, userDetail)
+          .then((res) => {
+            //console.log(res);
+            alert(res.data.message);
+          })
+          .catch((err) => {
+            //console.log(err);
+            let str = "";
+            err.data.message.forEach((item) => {
+              str += item + "\n\r";
+            });
+            alert(str);
+          });
       }
     },
     getProducts() {
@@ -58,6 +78,7 @@ const app = Vue.createApp({
         })
         .catch((error) => {
           console.dir(error);
+          alert(error.data.message);
           this.isLoading = false;
         });
     },
@@ -72,14 +93,15 @@ const app = Vue.createApp({
           //console.log(this.cart);
         })
         .catch((err) => {
-          console.dir(err);
+          //console.dir(err);
+          alert(err.data.message);
         });
     },
-    updateCart(id, qty) {
+    updateCart(item, qty) {
       axios
         .post(`${url}/api/${path}/cart`, {
           data: {
-            product_id: id,
+            product_id: item.id,
             qty: qty,
           },
         })
@@ -89,13 +111,14 @@ const app = Vue.createApp({
           this.products.filter((item) => {
             return (item.isLoading = false);
           });
-          alert(res.data.message);
+          alert(item.title + res.data.message);
           //console.log(this.products);
           this.$refs.userProductModal.closeModal();
           this.getCart();
         })
         .catch((err) => {
-          console.log(err);
+          //console.log(err);
+          alert(err.message);
           this.$refs.userProductModal.isLoading = false;
           this.products.filter((item) => {
             return (item.isLoading = false);
@@ -109,17 +132,17 @@ const app = Vue.createApp({
       const index = this.cart.carts.findIndex((item) => item.id === product.id);
       // 購物車有這項目
       if (index !== -1 && qty !== 0) {
-        this.updateCart(product.id, qty);
+        this.updateCart(product, qty);
         // 表格上面的項目且購物車裡面有項目
       } else if (index !== -1 && qty === 0) {
         let total_qty = (this.cart[index].qty += 1);
-        this.updateCart(product.id, total_qty);
+        this.updateCart(product, total_qty);
         // 表格上面的項目且購物車沒有這項目
       } else if (index === -1 && qty === 0) {
-        this.updateCart(product.id, 1);
+        this.updateCart(product, 1);
         // 購物車沒有這項目
       } else {
-        this.updateCart(product.id, qty);
+        this.updateCart(product, qty);
       }
       // setTimeout(() => {
       //   if (index !== -1 && qty !== 0) {
