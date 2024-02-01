@@ -131,7 +131,9 @@
                   </td>
                   <td>
                     {{ item.product.title }}
-                    <div class="text-success">已套用優惠券</div>
+                    <div class="text-success" v-show="isDiscount">
+                      已套用優惠券
+                    </div>
                   </td>
                   <td>
                     <div class="input-group input-group-sm">
